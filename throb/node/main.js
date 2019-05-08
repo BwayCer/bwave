@@ -9,7 +9,7 @@ let throbRateCodeLength  = throbRateCode.length;
 let throbSymbol          = '⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲';
 let throbSymbolLength    = throbSymbol.length;
 let monitorRefreshPeriod = 16;
-let monitorGraph         = "";
+let monitorGraph         = '';
 let arrhythmiaExtent     = 99;
 
 // function monitorClear() {
@@ -28,13 +28,17 @@ function throb(loop) {
         monitorGraph = throbSymbol[symbolIdx] + monitorGraph;
     }
 
+    let cutLength;
     let columns = process.stdout.columns;
 
     if (columns >= 64) {
-        monitorGraph = monitorGraph.substr(0, 58);
+        cutLength = 58;
     } else {
-        monitorGraph = monitorGraph.substr(0, columns - 6);
+        cutLength = columns - 6;
     }
+	if (monitorGraph.length > cutLength)  {
+        monitorGraph = monitorGraph.substr(0, cutLength);
+	}
 
     readline.clearLine(process.stdout, 0);
     logPrint('\r' + monitorGraph);

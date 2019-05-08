@@ -16,6 +16,8 @@ arrhythmiaExtent=99
 # fnMonitorClear() {
 #     clear
 #     # or
+#     # printf "\e[H\e[2J"
+#     # or
 #     # local idx
 #     # terminalSize
 #     # printf "\e[${_LINES}B"
@@ -27,6 +29,7 @@ fnThrob() {
     local loop=$throb_loop
 
     local symbolIdx
+    local cutLength
     # shell 計算會自動無條件捨去
     local rateIdx=$(((loop / throbSymbolLength) % throbRateCodeLength))
 
@@ -40,9 +43,12 @@ fnThrob() {
     fi
 
     if [ $_COLUMNS -ge 64 ]; then
-        monitorGraph="${monitorGraph:0:58}"
+        cutLength=58
     else
-        monitorGraph="${monitorGraph:0:$COLUMNS - 6}"
+        ((cutLength= COLUMNS - 6))
+    fi
+	if [ ${#monitorGraph} -gt $cutLength ]; then
+        monitorGraph="${monitorGraph:0:cutLength}"
     fi
 
     printf "\r\e[K%s" "$monitorGraph"
@@ -94,8 +100,12 @@ _LINES=0
 _COLUMNS=0
 
 terminalSize() {
-    _LINES=`tput lines`
-    _COLUMNS=`tput cols`
+    local size=`stty size`
+    _LINES=`  cut -d " " -f 1 <<< "$size"`
+    _COLUMNS=`cut -d " " -f 2 <<< "$size"`
+    # or
+    # _LINES=`tput lines`
+    # _COLUMNS=`tput cols`
 }
 
 
