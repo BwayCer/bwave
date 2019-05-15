@@ -47,7 +47,7 @@ fnThrob() {
     else
         ((cutLength= _COLUMNS - 6))
     fi
-	if [ ${#monitorGraph} -gt $cutLength ]; then
+    if [ ${#monitorGraph} -gt $cutLength ]; then
         monitorGraph="${monitorGraph:0:cutLength}"
     fi
 

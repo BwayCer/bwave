@@ -36,9 +36,9 @@ function throb(loop) {
     } else {
         cutLength = columns - 6;
     }
-	if (monitorGraph.length > cutLength)  {
+    if (monitorGraph.length > cutLength)  {
         monitorGraph = monitorGraph.substr(0, cutLength);
-	}
+    }
 
     readline.clearLine(process.stdout, 0);
     logPrint('\r' + monitorGraph);
