@@ -33,7 +33,7 @@ fnThrob() {
     # shell 計算會自動無條件捨去
     local rateIdx=$(((loop / throbSymbolLength) % throbRateCodeLength))
 
-    terminalSize
+    [ $_ynCanUseStty -eq 0 ] || terminalSize
 
     if [ "${throbRateCode:rateIdx:1}" == "0" ]; then
         monitorGraph="${throbSymbol[0]}$monitorGraph"
@@ -96,17 +96,24 @@ fnMain() {
 ##shStyle ###
 
 
+_ynCanUseStty=1
 _LINES=0
 _COLUMNS=0
 
 terminalSize() {
-    local size=`stty size`
+    local size=`stty size 2> /dev/null`
     _LINES=`  cut -d " " -f 1 <<< "$size"`
     _COLUMNS=`cut -d " " -f 2 <<< "$size"`
     # or
     # _LINES=`tput lines`
     # _COLUMNS=`tput cols`
 }
+
+if [ ! -t 0 ] || [[ ! "`stty size 2> /dev/null`" =~ [0-9]+\ [0-9]+ ]]; then
+    _ynCanUseStty=0
+    _LINES=0
+    _COLUMNS=64
+fi
 
 
 ##shStyle ###

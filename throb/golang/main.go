@@ -11,13 +11,16 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix())
+	checkTerminalSize()
 }
 
 func main() {
@@ -43,6 +46,8 @@ func main() {
 type CmdFlag struct {
 	Arrhythmia bool
 }
+
+var ynCanUseStty = true
 
 func handleFlag() CmdFlag {
 	insCmdFlag := CmdFlag{}
@@ -74,8 +79,12 @@ func throb(loop int) {
 		monitorGraph = append([]rune{throbSymbol[symbolIdx]}, monitorGraph...)
 	}
 
-	var cutLength int
-	_, columns := terminalSize()
+	var columns, cutLength int
+	if ynCanUseStty {
+		_, columns = terminalSize()
+	} else {
+		columns = 64
+	}
 
 	if columns >= 64 {
 		cutLength = 58
@@ -98,6 +107,20 @@ func throb_arrhythmia() {
 
 	throbRateCode = newThrobRateCode
 	throbRateCodeLength = len(throbRateCode)
+}
+
+func checkTerminalSize() {
+	cmd := exec.Command("stty", "size")
+	cmd.Stdin = os.Stdin
+	output, err := cmd.Output()
+	if err != nil {
+		ynCanUseStty = false
+	}
+	outputStr := strings.Trim(string(output), " \n")
+	ynMatch, _ := regexp.MatchString("^[0-9]+ [0-9]+$", outputStr)
+	if !ynMatch {
+		ynCanUseStty = false
+	}
 }
 
 func terminalSize() (lines, columns int) {
