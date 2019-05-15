@@ -86,5 +86,10 @@ function logPrint(txt) {
 }
 
 
+process.on('SIGINT', function() {
+    process.stdout.write('\n');
+    process.exit();
+});
+
 main();
 

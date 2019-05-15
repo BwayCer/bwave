@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,6 +25,27 @@ func init() {
 }
 
 func main() {
+	// TODO
+	// 仍有機會在 <Ctrl+C> 退出時出現以下訊息
+	// 推測是 <Ctrl+C> 按下時已讓終端機結束，使得 `stty size` 取值錯誤
+	// panic: signal: interrupt
+	// goroutine 1 [running]:
+	// main.terminalSize(0xc0004562d4, 0xc000124870)
+	//    /main.go:140 +0x24f
+	// main.throb(0x77)
+	//    /main.go:92 +0x246
+	// main.main()
+	//    /main.go:45 +0xdc
+	// exit status 2
+	osSignalChan := make(chan os.Signal, 1)
+	signal.Notify(osSignalChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-osSignalChan
+		fmt.Println()
+		// Golang 只要使用 <Ctrl+C> 都會以代碼 1 退出
+		os.Exit(0)
+	}()
+
 	var loop int = 0
 
 	insCmdFlag := handleFlag()
