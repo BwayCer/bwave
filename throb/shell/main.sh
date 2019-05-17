@@ -112,7 +112,7 @@ terminalSize() {
 if [ ! -t 0 ] || [[ ! "`stty size 2> /dev/null`" =~ [0-9]+\ [0-9]+ ]]; then
     _ynCanUseStty=0
     _LINES=0
-    _COLUMNS=64
+    _COLUMNS=32
 fi
 
 

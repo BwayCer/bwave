@@ -105,7 +105,7 @@ func throb(loop int) {
 	if ynCanUseStty {
 		_, columns = terminalSize()
 	} else {
-		columns = 64
+		columns = 32
 	}
 
 	if columns >= 64 {
