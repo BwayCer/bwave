@@ -32,9 +32,14 @@ let turbulenceIntensity  = 99; // 紊流強度
 function main() {
     // process.argv 為命令行執行的命令數組陣列 (argument vector)
     let argv = Array.prototype.slice.call(process.argv, 1);
-
     let ynHasTurbulenceOption = _isHasTurbulenceOption(argv);
     if (ynHasTurbulenceOption) becameTurbulent();
+
+    // 監聽退出訊號
+    process.on('SIGINT', function() {
+        process.stdout.write('\n');
+        process.exit();
+    });
 
     run();
 }
@@ -198,13 +203,6 @@ function _getWaveGraph(
 
     return bwaveGraph;
 }
-
-
-// 監聽退出訊號
-process.on('SIGINT', function() {
-    process.stdout.write('\n');
-    process.exit();
-});
 
 
 // 運行主程式
