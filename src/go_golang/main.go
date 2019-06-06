@@ -1,4 +1,4 @@
-// 心跳
+// 本微波
 
 // 外部依賴：
 //   /bin/stty
@@ -32,7 +32,7 @@ func main() {
 	// goroutine 1 [running]:
 	// main.terminalSize(0xc0004562d4, 0xc000124870)
 	//    /main.go:140 +0x24f
-	// main.throb(0x77)
+	// main.bwave(0x77)
 	//    /main.go:92 +0x246
 	// main.main()
 	//    /main.go:45 +0xdc
@@ -49,14 +49,14 @@ func main() {
 	var loop int = 0
 
 	insCmdFlag := handleFlag()
-	if insCmdFlag.Arrhythmia {
-		throb_arrhythmia()
+	if insCmdFlag.Turbulence {
+		bwave_turbulence()
 	}
 
 	for {
-		throb(loop)
+		bwave(loop)
 		loop++
-		time.Sleep(time.Duration(monitorRefreshPeriod) * time.Millisecond)
+		time.Sleep(time.Duration(bwavePeriod) * time.Millisecond)
 	}
 
 	// for _ = range time.Tick(time.Duration(monitorRefreshPeriod) * time.Millisecond) {
@@ -66,39 +66,35 @@ func main() {
 }
 
 type CmdFlag struct {
-	Arrhythmia bool
+	Turbulence bool
 }
 
 var ynCanUseStty = true
 
 func handleFlag() CmdFlag {
 	insCmdFlag := CmdFlag{}
-	flag.BoolVar(&insCmdFlag.Arrhythmia, "a", false, "to make arrhythmia.")
-	flag.BoolVar(&insCmdFlag.Arrhythmia, "arrhythmia", false, "same as -a. to make arrhythmia.")
+	flag.BoolVar(&insCmdFlag.Turbulence, "t", false, "to make turbulence.")
+	flag.BoolVar(&insCmdFlag.Turbulence, "turbulence", false, "same as -a. to make turbulence.")
 	flag.Parse()
 	return insCmdFlag
 }
 
-// monitorClear() {
-// 	fmt.Printf("\033[H\033[2J")
-// }
+var bwaveShakeCode = []byte{0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1}
+var bwaveShakeCodeLength = len(bwaveShakeCode)
+var bwaveSymbol = []rune("⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲")
+var bwaveSymbolLength = len(bwaveSymbol)
+var bwavePeriod = 16
+var bwaveGraph = make([]rune, 0, 300)
+var turbulenceIntensity = 99
 
-var throbRateCode = []byte{0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1}
-var throbRateCodeLength = len(throbRateCode)
-var throbSymbol = []rune("⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲")
-var throbSymbolLength = len(throbSymbol)
-var monitorRefreshPeriod = 16
-var monitorGraph = make([]rune, 0, 300)
-var arrhythmiaExtent = 99
+func bwave(loop int) {
+	rateIdx := (loop / bwaveSymbolLength) % bwaveShakeCodeLength
 
-func throb(loop int) {
-	rateIdx := (loop / throbSymbolLength) % throbRateCodeLength
-
-	if throbRateCode[rateIdx] == 0 {
-		monitorGraph = append([]rune{throbSymbol[0]}, monitorGraph...)
+	if bwaveShakeCode[rateIdx] == 0 {
+		bwaveGraph = append([]rune{bwaveSymbol[0]}, bwaveGraph...)
 	} else {
-		symbolIdx := throbSymbolLength - 1 - (loop % throbSymbolLength)
-		monitorGraph = append([]rune{throbSymbol[symbolIdx]}, monitorGraph...)
+		symbolIdx := bwaveSymbolLength - 1 - (loop % bwaveSymbolLength)
+		bwaveGraph = append([]rune{bwaveSymbol[symbolIdx]}, bwaveGraph...)
 	}
 
 	var columns, cutLength int
@@ -113,22 +109,22 @@ func throb(loop int) {
 	} else {
 		cutLength = columns - 6
 	}
-	if len(monitorGraph) > cutLength {
-		monitorGraph = monitorGraph[0:cutLength]
+	if len(bwaveGraph) > cutLength {
+		bwaveGraph = bwaveGraph[0:cutLength]
 	}
 
-	fmt.Printf("\r\033[K%s", string(monitorGraph))
+	fmt.Printf("\r\033[K%s", string(bwaveGraph))
 }
 
-func throb_arrhythmia() {
-	newThrobRateCode := make([]byte, 99)
+func bwave_turbulence() {
+	newCode := make([]byte, 99)
 
-	for idx, leng := 0, arrhythmiaExtent; idx < leng; idx++ {
-		newThrobRateCode[idx] = byte(rand.Intn(2))
+	for idx, leng := 0, turbulenceIntensity; idx < leng; idx++ {
+		newCode[idx] = byte(rand.Intn(2))
 	}
 
-	throbRateCode = newThrobRateCode
-	throbRateCodeLength = len(throbRateCode)
+	bwaveShakeCode = newCode
+	bwaveShakeCodeLength = len(bwaveShakeCode)
 }
 
 func checkTerminalSize() {

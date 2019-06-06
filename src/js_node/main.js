@@ -1,31 +1,28 @@
+/* 本微波 */
+
 "use strict";
-/* 心跳 */
 
 
 const readline = require('readline');
 
-let throbRateCode        = '010110111011';
-let throbRateCodeLength  = throbRateCode.length;
-let throbSymbol          = '⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲';
-let throbSymbolLength    = throbSymbol.length;
-let monitorRefreshPeriod = 16;
-let monitorGraph         = '';
-let arrhythmiaExtent     = 99;
+let bwaveShakeCode       = '010110111011';
+let bwaveShakeCodeLength = bwaveShakeCode.length;
+let bwaveSymbol          = '⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲';
+let bwaveSymbolLength    = bwaveSymbol.length;
+let bwavePeriod          = 16;
+let bwaveGraph           = '';
+let turbulenceIntensity  = 99;
 
-// function monitorClear() {
-//     console.clear();
-// }
+function bwave(loop) {
+    setTimeout(bwave, bwavePeriod, loop + 1);
 
-function throb(loop) {
-    setTimeout(throb, monitorRefreshPeriod, loop + 1);
+    let rateIdx = Math.floor((loop / bwaveSymbolLength) % bwaveShakeCodeLength);
 
-    let rateIdx = Math.floor((loop / throbSymbolLength) % throbRateCodeLength);
-
-    if (throbRateCode[rateIdx] === '0') {
-        monitorGraph = throbSymbol[0] + monitorGraph;
+    if (bwaveShakeCode[rateIdx] === '0') {
+        bwaveGraph = bwaveSymbol[0] + bwaveGraph;
     } else {
-        let symbolIdx = throbSymbolLength - 1 - (loop % throbSymbolLength);
-        monitorGraph = throbSymbol[symbolIdx] + monitorGraph;
+        let symbolIdx = bwaveSymbolLength - 1 - (loop % bwaveSymbolLength);
+        bwaveGraph = bwaveSymbol[symbolIdx] + bwaveGraph;
     }
 
     let cutLength;
@@ -36,24 +33,24 @@ function throb(loop) {
     } else {
         cutLength = columns - 6;
     }
-    if (monitorGraph.length > cutLength)  {
-        monitorGraph = monitorGraph.substr(0, cutLength);
+    if (bwaveGraph.length > cutLength)  {
+        bwaveGraph = bwaveGraph.substr(0, cutLength);
     }
 
     readline.clearLine(process.stdout, 0);
-    logPrint('\r' + monitorGraph);
+    logPrint('\r' + bwaveGraph);
 }
 
-function throb_arrhythmia() {
+function bwave_turbulence() {
     let idx, len;
-    let newThrobRateCode = "";
+    let newCode = "";
 
-    for (idx = 0, len = arrhythmiaExtent; idx < len ; idx++) {
-        newThrobRateCode += Math.floor(Math.random() * 10) % 2;
+    for (idx = 0, len = turbulenceIntensity; idx < len ; idx++) {
+        newCode += Math.floor(Math.random() * 10) % 2;
     }
 
-    throbRateCode = newThrobRateCode;
-    throbRateCodeLength = throbRateCode.length;
+    bwaveShakeCode = newCode;
+    bwaveShakeCodeLength = bwaveShakeCode.length;
 }
 
 function main() {
@@ -61,13 +58,13 @@ function main() {
     let toBreak = false;
     // 命令行傳遞的參數 argument vector
     let argv = Array.prototype.slice.call(process.argv, 1);
-    let opt_arrhythmia = false;
+    let opt_turbulence = false;
 
     for (idx = 1, len = argv.length; idx < len ; idx++) {
         switch (argv[idx]) {
-            case '-a':
-            case '--arrhythmia':
-                opt_arrhythmia = true;
+            case '-t':
+            case '--turbulence':
+                opt_turbulence = true;
                 break;
             default:
                 toBreak = true;
@@ -75,9 +72,9 @@ function main() {
         if (toBreak) break;
     }
 
-    if (opt_arrhythmia) throb_arrhythmia();
+    if (opt_turbulence) bwave_turbulence();
 
-    throb(0);
+    bwave(0);
 }
 
 

@@ -1,45 +1,33 @@
 #!/bin/bash
-# 心跳
+# 本微波
 
 
 ##shStyle ###
 
 
-throbRateCode="010110111011"
-throbRateCodeLength=${#throbRateCode}
-throbSymbol=("⠤" "⣄" "⣀" "⣠" "⠤" "⠖" "⠒" "⠋" "⠉" "⠙" "⠒" "⠲")
-throbSymbolLength=${#throbSymbol[@]}
-monitorRefreshPeriod=0.016
-monitorGraph=""
-arrhythmiaExtent=99
+bwaveShakeCode="010110111011"
+bwaveShakeCodeLength=${#bwaveShakeCode}
+bwaveSymbol=("⠤" "⣄" "⣀" "⣠" "⠤" "⠖" "⠒" "⠋" "⠉" "⠙" "⠒" "⠲")
+bwaveSymbolLength=${#bwaveSymbol[@]}
+bwavePeriod=0.016
+bwaveGraph=""
+turbulenceIntensity=99
 
-# fnMonitorClear() {
-#     clear
-#     # or
-#     # printf "\e[H\e[2J"
-#     # or
-#     # local idx
-#     # terminalSize
-#     # printf "\e[${_LINES}B"
-#     # for ((idx=0; idx < $_LINES ; idx++)); do printf "\e[A\e[K"; done
-#     # printf "\e[00m"
-# }
-
-fnThrob() {
-    local loop=$throb_loop
+fnBwave() {
+    local loop=$bwave_loop
 
     local symbolIdx
     local cutLength
     # shell 計算會自動無條件捨去
-    local rateIdx=$(((loop / throbSymbolLength) % throbRateCodeLength))
+    local rateIdx=$(((loop / bwaveSymbolLength) % bwaveShakeCodeLength))
 
     [ $_ynCanUseStty -eq 0 ] || terminalSize
 
-    if [ "${throbRateCode:rateIdx:1}" == "0" ]; then
-        monitorGraph="${throbSymbol[0]}$monitorGraph"
+    if [ "${bwaveShakeCode:rateIdx:1}" == "0" ]; then
+        bwaveGraph="${bwaveSymbol[0]}$bwaveGraph"
     else
-        symbolIdx=$((throbSymbolLength - 1 - (loop % throbSymbolLength)))
-        monitorGraph="${throbSymbol[symbolIdx]}$monitorGraph"
+        symbolIdx=$((bwaveSymbolLength - 1 - (loop % bwaveSymbolLength)))
+        bwaveGraph="${bwaveSymbol[symbolIdx]}$bwaveGraph"
     fi
 
     if [ $_COLUMNS -ge 64 ]; then
@@ -47,48 +35,48 @@ fnThrob() {
     else
         ((cutLength= _COLUMNS - 6))
     fi
-    if [ ${#monitorGraph} -gt $cutLength ]; then
-        monitorGraph="${monitorGraph:0:cutLength}"
+    if [ ${#bwaveGraph} -gt $cutLength ]; then
+        bwaveGraph="${bwaveGraph:0:cutLength}"
     fi
 
-    printf "\r\e[K%s" "$monitorGraph"
+    printf "\r\e[K%s" "$bwaveGraph"
 
-    ((throb_loop++))
+    ((bwave_loop++))
 }
-throb_loop=0
-throb_arrhythmia() {
+bwave_loop=0
+bwave_turbulence() {
     local idx len
-    local newThrobRateCode=""
+    local newCode=""
 
-    for ((idx=0, len=arrhythmiaExtent; idx < len ; idx++))
+    for ((idx=0, len=turbulenceIntensity; idx < len ; idx++))
     do
-        newThrobRateCode+="$(( RANDOM % 2))"
+        newCode+="$((RANDOM % 2))"
     done
 
-    throbRateCode=$newThrobRateCode
-    throbRateCodeLength=${#throbRateCode}
+    bwaveShakeCode=$newCode
+    bwaveShakeCodeLength=${#bwaveShakeCode}
 }
 
 fnMain() {
-    local opt_arrhythmia=0
+    local opt_turbulence=0
 
     while [ -n "y" ]
     do
         case "$1" in
-            -a | --arrhythmia )
-                opt_arrhythmia=1
+            -t | --turbulence )
+                opt_turbulence=1
                 shift
                 ;;
             * ) break ;;
         esac
     done
 
-    [ $opt_arrhythmia -eq 0 ] || throb_arrhythmia
+    [ $opt_turbulence -eq 0 ] || bwave_turbulence
 
     while [ -n "y" ]
     do
-        fnThrob
-        sleep "$monitorRefreshPeriod"
+        fnBwave
+        sleep "$bwavePeriod"
     done
 }
 
