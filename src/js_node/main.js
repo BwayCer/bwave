@@ -3,6 +3,10 @@
 /**
  * 本微波 Bwave
  *
+ * 當 `go run` 命令成功執行時，會顯示類似如下的波紋：
+ * <br>
+ * ⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲
+ *
  * @file
  * @author [張本微]{@link https://bwaycer.github.io/about}
  * @license CC0-1.0
@@ -45,8 +49,8 @@ function main() {
 }
 
 /**
- * 是否有亂流的選項旗幟：
- * 檢查選項旗幟中是否包含 `-t` 或 `--turbulence` 的選項，
+ * 是否有亂流的選項旗標：
+ * 檢查選項旗標中是否包含 `-t` 或 `--turbulence` 的選項，
  * 如果有救回傳 `true`， 否則回傳 `false`。
  *
  * @func _isHasTurbulenceOption
@@ -101,27 +105,30 @@ function becameTurbulent() {
  * @func run
  */
 function run() {
-    runTimer(0, bwavePeriod, {
+    runTimer({
         bwaveCode,
         bwaveCodeLength,
         bwaveSymbol,
         bwaveSymbolLength,
         bwaveGraph: '', // 當前波浪圖形
-    });
+    }, bwavePeriod);
 }
 
 /**
  * 執行計時器： 讓計時器形成迴圈重複調用。
+ * <br>
+ * TODO 是否還有其他類似計時器的功能呢？
+ * ex: setTimeout, setInterval, 空迴圈 sleep。
  *
  * @func runTimer
- * @param {Numbers} loopCount - 迴圈次數。
- * @param {Numbers} bwavePeriod - 波浪週期。
  * @param {object} makeWaveInfo - 造浪資訊。
+ * @param {Numbers} bwavePeriod - 波浪週期。
+ * @param {Numbers} [loopCount] - 迴圈次數。
  */
-function runTimer(loopCount, bwavePeriod, makeWaveInfo) {
+function runTimer(makeWaveInfo, bwavePeriod, loopCount = 0) {
     setTimeout(
         runTimer, bwavePeriod,
-        loopCount + 1, bwavePeriod, makeWaveInfo
+        makeWaveInfo, bwavePeriod, loopCount + 1
     );
     // 讀取命令行的寬度
     makeWaveInfo.cmdLineColumns = process.stdout.columns;
@@ -136,7 +143,27 @@ function runTimer(loopCount, bwavePeriod, makeWaveInfo) {
  * @param {object} info - 造浪資訊。
  */
 function makeWave(loopCount, info) {
-    let waveGraph = _getWaveGraph(loopCount, info);
+    // 解構取值
+    let {
+        bwaveCode,
+        bwaveCodeLength,
+        bwaveSymbol,
+        bwaveSymbolLength,
+        bwaveGraph,
+        cmdLineColumns,
+    } = info;
+    // 取得波浪長度
+    let waveLength = _getWaveLength(cmdLineColumns);
+    // 取得波浪圖形
+    let waveGraph = _getWaveGraph(
+        loopCount,
+        bwaveCode,
+        bwaveCodeLength,
+        bwaveSymbol,
+        bwaveSymbolLength,
+        bwaveGraph,
+        waveLength
+    );
 
     // 更新於造浪資訊上的當前波浪圖形
     info.bwaveGraph = waveGraph;
@@ -150,11 +177,12 @@ function makeWave(loopCount, info) {
 
 /**
  * 取得波浪長度：
- * 若 命令行寬度 >= 64 則 波浪長度為 58；
+ * 若 命令行寬度 >= 64 則 波浪長度 == 58；
  * 否則 波浪長度為 命令行寬度 - 6。
  *
  * @func _getWaveLength
- * @param {String} cmdLineColumns - 命令行的寬度。
+ * @param {Numbers} cmdLineColumns - 命令行的寬度。
+ * @return {Numbers}
  */
 function _getWaveLength(cmdLineColumns) {
     let waveLength;
@@ -172,36 +200,43 @@ function _getWaveLength(cmdLineColumns) {
  *
  * @func _getWaveGraph
  * @param {Numbers} loopCount - 迴圈次數。
- * @param {object} info - 造浪資訊。
+ * @param {String} bwaveCode - 數字化波形。
+ * 以 `0|1` 表示： 1 代表有波形， 0 則沒有。
+ * @param {Numbers} bwaveCodeLength - 數字化波形的長度。
+ * @param {String} bwaveSymbol - 波浪的圖形文字。
+ * @param {Numbers} bwaveSymbolLength - 波浪的圖形文字的長度。
+ * @param {String} bwaveGraph - 當前波浪圖形。
+ * @param {Numbers} waveLength - 波浪長度。
+ * @return {String}
  */
 function _getWaveGraph(
     loopCount,
-    {
-        bwaveCode,
-        bwaveCodeLength,
-        bwaveSymbol,
-        bwaveSymbolLength,
-        bwaveGraph,
-        cmdLineColumns,
-    }
+    bwaveCode,
+    bwaveCodeLength,
+    bwaveSymbol,
+    bwaveSymbolLength,
+    bwaveGraph,
+    waveLength
 ) {
+    let waveGraph = '';
+
     // 確認此次是否產生波形
     let bwaveCodeIdx = Math.floor((loopCount / bwaveSymbolLength) % bwaveCodeLength);
     if (bwaveCode[bwaveCodeIdx] === '0') {
-        bwaveGraph = bwaveSymbol[0] + bwaveGraph;
+        // 設置平行波形樣式
+        waveGraph = bwaveSymbol[0] + bwaveGraph;
     } else {
         // 確認此次波形的樣式位置
         let symbolIdx = bwaveSymbolLength - 1 - (loopCount % bwaveSymbolLength);
-        bwaveGraph = bwaveSymbol[symbolIdx] + bwaveGraph;
+        waveGraph = bwaveSymbol[symbolIdx] + bwaveGraph;
     }
 
     // 檢查長度是否符合，超過長度必須修減。
-    let waveLength = _getWaveLength(cmdLineColumns);
-    if (bwaveGraph.length > waveLength)  {
-        bwaveGraph = bwaveGraph.substr(0, waveLength);
+    if (waveGraph.length > waveLength)  {
+        waveGraph = waveGraph.substr(0, waveLength);
     }
 
-    return bwaveGraph;
+    return waveGraph;
 }
 
 
