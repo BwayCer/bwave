@@ -6,7 +6,7 @@
 	main 的註解文件只會有包的註解資訊，
 	且 godoc 註解文件不顯示內部物件。
 
-	當 `go run` 命令成功執行時，會顯示類似如下的波紋：
+	當命令成功執行時，會顯示類似如下的波紋：
 		⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲
 
 	Dependent Modules
@@ -47,6 +47,7 @@ func main() {
 		becameTurbulent()
 	}
 
+	// 監聽退出訊號
 	// TODO err
 	// BUG(who)
 	// 仍有機會在 <Ctrl+C> 退出時出現以下訊息
@@ -74,14 +75,14 @@ func main() {
 	Run()
 }
 
-// `stty size` 命令工具
+// `stty size` 命令工具。
 type SttySize struct {
 	ynCanUseStty   bool
 	defaultLines   int
 	defaultColumns int
 }
 
-// 初始化設定值，檢查是否能使用 `stty` 命令，與設定預設行列數
+// 初始化設定值，檢查是否能使用 `stty` 命令，與設定預設行列數。
 func (self *SttySize) Init(defaultLines, defaultColumns int) {
 	// 檢查是否能使用 `stty` 命令
 	ynCanUseStty := true
@@ -104,7 +105,7 @@ func (self *SttySize) Init(defaultLines, defaultColumns int) {
 	}
 }
 
-// 取得命令行行列數
+// 取得命令行行列數。
 func (self SttySize) GetSize() (lines, columns int) {
 	if !self.ynCanUseStty {
 		lines = self.defaultLines
@@ -130,10 +131,10 @@ func (self SttySize) GetSize() (lines, columns int) {
 	return
 }
 
-// 實例化 SttySize
+// 實例化 SttySize。
 var insSttySize = SttySize{}
 
-// 造浪資訊
+// 造浪資訊。
 type makeWaveInfo struct {
 	bwaveCode           []byte
 	bwaveCodeLength     int
@@ -145,7 +146,7 @@ type makeWaveInfo struct {
 	cmdLineColumns      int
 }
 
-// 初始設定值
+// 初始設定值。
 var (
 	// 數字化波形： 1 代表有波形， 0 則沒有。
 	bwaveCode       = []byte{0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1}
@@ -164,11 +165,11 @@ var (
 // 如果有救回傳 `true`， 否則回傳 `false`。
 func isHasTurbulenceOption() bool {
 	// 使用 flag 程式包處理選項旗標
-	var turbulence bool
-	flag.BoolVar(&turbulence, "t", false, "to make turbulence.")
-	flag.BoolVar(&turbulence, "turbulence", false, "same as -a. to make turbulence.")
+	var opt_turbulence bool
+	flag.BoolVar(&opt_turbulence, "t", false, "to make turbulence.")
+	flag.BoolVar(&opt_turbulence, "turbulence", false, "same as -a. to make turbulence.")
 	flag.Parse()
-	return turbulence
+	return opt_turbulence
 }
 
 // 形成亂流：
