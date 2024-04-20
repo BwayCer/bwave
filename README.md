@@ -5,12 +5,16 @@
 
 > 版本： v0.1.0
 
-進階版的「你好，世界」。
+![Demo](./looseLeaf/demo.gif)
+
+進階版的「你好，世界」，希望能幫助您習慣一門新語言。
+
+(邏輯作法建議參考 [虛擬程式碼](./looseLeaf/pseudocode.txt)。)
 
 
 ## 範本
 
-* [bash.sh](./src/sh_bash/main.sh)
-* [node.js](./src/js_node/main.js)
 * [golang.go](./src/go_golang/main.go)
+* [node.js](./src/js_node/main.js)
+* [bash.sh](./src/sh_bash/main.sh)
 

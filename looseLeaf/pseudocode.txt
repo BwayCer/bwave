@@ -1,0 +1,159 @@
+# 本微波
+#
+# 當命令成功執行時，會顯示類似如下的波紋：
+# ⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲
+
+#* 閱讀本文件須知:
+#*   1. `#` 為一般程式註解；`#*` 為本文件註解。
+#*   2. str, num, bool, list, map 為基本類型保留字。
+#*   3. 屬性和方法以 "大寫" 開頭為公開成員；以 "_<小寫>" 開頭為內部成員。
+#*      `@method()`、`@argu` 為虛擬的屬性和方法，可使用內建或自定義物件實現。
+#*      其餘為命名或邏輯建議。
+
+# 初始設定值
+str bwaveCode   = '010110111011'; # 數字化波形： 1 代表有波形，0 則沒有。
+str bwaveSymbol = '⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲'; # 波浪的圖形文字
+num bwavePeriod             = 16; # 波浪週期
+num turbulenceIntensity     = 99; # 紊流強度
+
+#* 1. 實現可執行的本微波完整功能。
+#* 2. 外部輸入參數 [argv] 指的是：
+#*      1. 命令行傳入的選項旗標。
+#*      2. 函式調用時輸入的函式參數。
+#*    如果取得物件可以修改則請先拷貝後再給子函式使用。
+# 主程式
+void func Main(list argv) {
+    #* 調用 [_isHasTurbulenceOption()] 方法來檢查是否包含
+    #* `-t` 或 `--turbulence` 的選項旗標，
+    #* 返回若為 `true` 則調用 [BecameTurbulent()] 方法去混亂波型。
+    list argv_ = argv.copy();
+    bool ynHasTurbulenceOption = _isHasTurbulenceOption(argv_);
+
+    #* 不支持三元運算符時可用 `if else` 條件判斷。
+    str bwaveCode_ = ynHasTurbulenceOption ? BecameTurbulent() : bwaveCode;
+    num bwaveCodeLength = bwaveCode_.length;
+    num bwaveSymbolLength = bwaveSymbol.length;
+    map makeWaveInfo = {
+        bwaveCode: bwaveCode_,
+        bwaveCodeLength,
+        bwaveSymbol,
+        bwaveSymbolLength,
+    };
+    str bwaveGraph = '';
+
+    num cycleOutputCount = bwaveCodeLength * bwaveSymbolLength
+    #* 1. 如果程式不支持嵌套函式則以私有函式實現。
+    #* 2. 如果不支持初始值設定則 [loopCount] 的初始值由外部傳入。
+    #* 3. 以計時器方式定時打印形成動畫。
+    #*      1. 不支持計時器則以相似功能替代
+    #*      2. 執行後參數固定，不再因外部修改而影響結果。
+    void func @runTimer(map makeWaveInfo, num bwavePeriod, num loopCount = 0) {
+        #* `@畫面寬度` 指的是：
+        #*   1. 命令行的寬度
+        #*   2. 程式支援的圖形化介面寬度
+        # 取得畫面寬度
+        num viewSizeColumns = @畫面寬度;
+        # 計算波浪長度
+        num waveLength = viewSizeColumns >= 64 ? 58 : viewSizeColumns - 6;
+
+        # 取得本次波浪圖形
+        bwaveGraph = MakeWave(
+            makeWaveInfo, bwaveGraph, loopCount, waveLength
+        );
+
+        #* 由於呈現出的波浪圖要形成動畫，所以輸出時要達成：
+        #*   1. 清除上段文字。
+        #*   2. 不換行且游標移置起始點位置輸出。
+        # 清除整行文字並將波浪圖形顯示在畫面上
+        printf('\r\e[K' + waveGraph);
+
+        # 避免觸摸到最大值而拋錯
+        num loopCount_ = (loopCount + 1) % cycleOutputCount
+        #* 計時器注意事項：
+        #*   1. 程式原生的週期性計時器若會因被延遲執行而使被延遲時間段的
+        #*      多個計時器擠在同時執行，那麼請改以單次計時器實現。
+        #*   2. 若使用單次計時器實現者請測試是否會因為無限的遞歸寫法而
+        #*      無法釋放記憶體。
+        @wait(bwavePeriod)
+            .run(@runTimer(makeWaveInfo, bwavePeriod, loopCount_));
+    }
+
+    # 監聽 SIGINT 退出訊號，在退出前做換行和退出代碼的處理。
+    @listener('SIGINT').on(func() {
+        print();
+        exit(0);
+    });
+
+    @runTimer(makeWaveInfo, bwavePeriod);
+}
+
+# 檢查是否有 `-t` 或 `--turbulence` 亂流的選項旗標，
+# 如果有就回傳 `true`， 否則回傳 `false`。
+bool func _isHasTurbulenceOption(list argv) {
+    bool ynHasTurbulenceOption = false;
+    for (val in argv) {
+        switch (val) {
+            case '-t':
+            case '--turbulence':
+                ynHasTurbulenceOption = true;
+                break;
+        }
+        if (ynHasTurbulenceOption) break;
+    }
+    return ynHasTurbulenceOption;
+}
+
+# 使波紋圖形無規則起伏。(單次振幅仍為一個週期波)
+#
+# 用亂數隨機的方式，建立長度為 [turbulenceIntensity]
+# 的數字化波形 [bwaveCode] 並回傳。
+str func becameTurbulent(str turbulenceIntensity) {
+    #* 由多個 0 或 1 組成
+    str newCode = '';
+    for (idx = 0 -> turbulenceIntensity) {
+        newCode += (random() % 2).str();
+    }
+    return newCode;
+}
+
+# 建立並輸出波浪圖形。
+#
+# [info] 應包含 `bwaveCode, bwaveCodeLength, bwaveSymbol, bwaveSymbolLength`
+# 四樣不變的資訊。
+# 以 [loopCount] 計算本次波形，參考上次顯示的波浪圖形 [bwaveGraph]
+# 來形成動畫，並以 [waveLength] 調整長度大小。
+str func MakeWave(
+    map info,       #* 固定資訊
+    str bwaveGraph, #* 上次顯示的波浪圖形
+    num loopCount,  #* 迴圈次數
+    num waveLength  #* 波浪圖形長度
+) {
+    #* 如果程式不支持解構取值則使用一個一個賦值。
+    var {
+        bwaveCode,
+        bwaveCodeLength,
+        bwaveSymbol,
+        bwaveSymbolLength,
+    } = info;
+
+    # 確認此次是否產生波形
+    num bwaveCodeIdx
+        = ((loopCount / bwaveSymbolLength) % bwaveCodeLength).floor();
+    num symbolIdx;
+    if (bwaveCode[bwaveCodeIdx] == '0') {
+        # 設置平行波形樣式
+        symbolIdx = 0;
+    } else {
+        # 確認此次波形的樣式位置
+        symbolIdx = bwaveSymbolLength - 1 - (loopCount % bwaveSymbolLength);
+    }
+    str waveGraph = bwaveSymbol[symbolIdx] + bwaveGraph;
+
+    # 檢查長度是否符合，超過長度必須修減。
+    if (waveGraph.length > waveLength) {
+        waveGraph = waveGraph.substring(0, waveLength);
+    }
+
+    return waveGraph;
+}
+
