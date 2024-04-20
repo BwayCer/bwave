@@ -1,13 +1,11 @@
 本微波
 =======
 
-
 > 授權： [CC0-1.0](https://choosealicense.com/licenses/cc0-1.0/)
 
 > 版本： v0.1.0
 
 進階版的「你好，世界」。
-
 
 
 ## 範本
