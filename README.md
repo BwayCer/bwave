@@ -16,5 +16,6 @@
 
 * [golang.go](./src/go_golang/main.go)
 * [node.js](./src/js_node/main.js)
+* [python.py](./src/py_python/main.py)
 * [bash.sh](./src/sh_bash/main.sh)
 
