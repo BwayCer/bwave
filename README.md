@@ -2,7 +2,7 @@
 =======
 
 
-> 授權： [CC0-1.0](./LICENSE.md)
+> 授權： [CC0-1.0](https://choosealicense.com/licenses/cc0-1.0/)
 
 > 版本： v0.1.0
 
