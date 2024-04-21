@@ -1,8 +1,16 @@
-#!/bin/bash
-# 本微波
+#!/usr/bin/env bash
 
+# 本微波
+#
 # 當命令成功執行時，會顯示類似如下的波紋：
 # ⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲
+
+
+##shArea ###
+
+
+# 遇到錯誤就不再執行
+set -e
 
 
 ##shStyle 共享變數
@@ -10,107 +18,146 @@
 
 # 初始設定值
 bwaveCode="010110111011" # 數字化波形： 1 代表有波形， 0 則沒有。
-bwaveCodeLength=${#bwaveCode}
-bwaveSymbol=("⠤" "⣄" "⣀" "⣠" "⠤" "⠖" "⠒" "⠋" "⠉" "⠙" "⠒" "⠲") # 波浪的圖形文字
-bwaveSymbolLength=${#bwaveSymbol[@]}
-bwavePeriod=0.016 # 波浪週期（由於 shell 沒有小數運算，故此處的單位式毫秒）
+bwaveSymbol="⠤⣄⣀⣠⠤⠖⠒⠋⠉⠙⠒⠲" # 波浪的圖形文字
+# 由於 shell 沒有小數運算，故此處的單位是秒
+bwavePeriod=0.016 # 波浪週期
 turbulenceIntensity=99 # 紊流強度
 
-# TODO 想想，為何會把變數放於最外層所有程式皆可讀取的地方？
-cmdLineColumns=0
-bwaveGraph=""
+# 啟用鍵值對類型
+declare -gA _makeWaveInfo
 
 
-##shStyle ###
+##shArea 介面函式
 
 
+# 主程式
 fnMain() {
-  # 初始化 fnSttySize 函式
-  fnSttySize_init 1 32
+  # 初始化 _fnSttySize 函式
+  _fnSttySize_init
 
-  fnIsHasTurbulenceOption "$@"
-  local ynHasTurbulenceOption=$rtnIsHasTurbulenceOption
-  [ $ynHasTurbulenceOption -eq 0 ] || fnBecameTurbulent
+  _fnIsHasTurbulenceOption "$@"
+  local ynHasTurbulenceOption=$_rtnIsHasTurbulenceOption
+
+  local bwaveCode_="$bwaveCode"
+  [ $ynHasTurbulenceOption -eq 0 ] || {
+    fnBecameTurbulent
+    bwaveCode_="$rtnBecameTurbulent"
+  }
+
+  local bwaveCodeLength=${#bwaveCode}
+  local bwaveSymbolLength=${#bwaveSymbol}
+  _makeWaveInfo["bwaveCode"]="$bwaveCode_"
+  _makeWaveInfo["bwaveCodeLength"]=$bwaveCodeLength
+  _makeWaveInfo["bwaveSymbol"]="$bwaveSymbol"
+  _makeWaveInfo["bwaveSymbolLength"]=$bwaveSymbolLength
+  local bwaveGraph=""
+
+  # 序列、鍵值對無法經參數傳遞，為示範鍵值因而無法使參數固定。
+  # shell 並不適用於開發大專案的語言，多數也只能靠約定來維持變數環境。
+  runTimer() {
+    local loopCount=$1
+
+    # 取得畫面寬度
+    _fnSttySize 1 32
+    local viewSizeColumns=$_rtnSttySize_columns
+
+    # 計算波浪長度
+    local waveLength=58
+    [ $viewSizeColumns -ge 64 ] || waveLength=$((viewSizeColumns - 6))
+
+    # 取得本次波浪圖形
+    fnMakeWave "$bwaveGraph" $loopCount $waveLength
+    bwaveGraph="$rtnMakeWave"
+
+    # 清除整行文字並將波浪圖形顯示在畫面上
+    printf "\r\e[K%s" "$bwaveGraph"
+  }
 
   # 監聽退出訊號
   trap 'echo; exit' 2
 
-  fnRun
+  # 以 for loop + sleep 組成計時器
+  local cycleOutputCount=$((bwaveCodeLength * bwaveSymbolLength))
+  local loopCount=0
+  while [ -n "y" ]
+  do
+    runTimer $loopCount
+    # 避免觸摸到最大值而拋錯
+    loopCount=$(((loopCount + 1) % cycleOutputCount))
+    # 讓程序睡眠停止運行
+    sleep "$bwavePeriod"
+  done
 }
 
 
 ##shStyle 函式庫
 
 
-# `stty size` 命令工具： 取得命令行行列數。
+# 透過 `stty size` 命令取得命令行行列數。
 #
-# TODO 還有什麼命令能取得命令行的行列數嗎？
+# 還有什麼命令能取得命令行的行列數嗎？
 #   1. `$LINES`, `$COLUMNS` 的變數中
 #   2. `tput lines`, `tput cols`
-rtnSttySize_lines=0
-rtnSttySize_columns=0
-fnSttySize() {
-  if [ $fnSttySize_ynCanUseStty -eq 0 ]; then
-    rtnSttySize_lines=$fnSttySize_defaultLines
-    rtnSttySize_columns=$fnSttySize_defaultColumns
-    return
-  fi
-
-  local lines=0
-  local columns=0
-
-  local size=`stty size 2> /dev/null`
-  lines=`  cut -d " " -f 1 <<< "$size"`
-  columns=`cut -d " " -f 2 <<< "$size"`
-
-  rtnSttySize_lines=$lines
-  rtnSttySize_columns=$columns
-}
-fnSttySize_ynCanUseStty=1
-fnSttySize_defaultLines=0
-fnSttySize_defaultColumns=0
-# 初始化設定值，檢查是否能使用 `stty` 命令，與設定預設行列數
-fnSttySize_init() {
+_rtnSttySize_lines=0
+_rtnSttySize_columns=0
+_fnSttySize() {
   local defaultLines=$1
   local defaultColumns=$2
 
+  _rtnSttySize_lines=0
+  _rtnSttySize_columns=0
+
+  if [ $_fnSttySize_ynCanUseStty -eq 0 ]; then
+    [ $defaultLines -gt 0 ] && _rtnSttySize_lines=$defaultLines || :
+    [ $defaultColumns -gt 0 ] && _rtnSttySize_columns=$defaultColumns || :
+    return
+  fi
+
+  local size=`stty size 2> /dev/null`
+  local lines=`  cut -d " " -f 1 <<< "$size"`
+  local columns=`cut -d " " -f 2 <<< "$size"`
+
+  _rtnSttySize_lines=$lines
+  _rtnSttySize_columns=$columns
+}
+_fnSttySize_ynCanUseStty=1
+# 初始化，檢查是否能使用 `stty` 命令。
+_fnSttySize_init() {
   # 檢查是否能使用 `stty` 命令
   if [ ! -t 0 ] || [[ ! "`stty size 2> /dev/null`" =~ [0-9]+\ [0-9]+ ]]; then
-    fnSttySize_ynCanUseStty=0
-    fnSttySize_defaultLines=$defaultLines
-    fnSttySize_defaultColumns=$defaultColumns
+    _fnSttySize_ynCanUseStty=0
   else
-    fnSttySize_ynCanUseStty=1
+    _fnSttySize_ynCanUseStty=1
   fi
 }
 
 
-# 是否有亂流的選項旗標：
-# 檢查選項旗標中是否包含 `-t` 或 `--turbulence` 的選項，
-# 如果有救回傳 `true`， 否則回傳 `false`。
-rtnIsHasTurbulenceOption=0
-fnIsHasTurbulenceOption() {
-  local opt_turbulence=0
+# 檢查是否有 `-t` 或 `--turbulence` 亂流的選項旗標，
+# 如果有就回傳 `true`， 否則回傳 `false`。
+_rtnIsHasTurbulenceOption=0
+_fnIsHasTurbulenceOption() {
+  local val
+  local ynHasTurbulenceOption=0
 
-  while [ -n "y" ]
+  for val in "$@"
   do
-    case "$1" in
+    case "$val" in
       -t | --turbulence )
-        opt_turbulence=1
-        shift
+        ynHasTurbulenceOption=1
+        break
         ;;
-      * ) break ;;
     esac
   done
 
-  rtnIsHasTurbulenceOption=$opt_turbulence
+  _rtnIsHasTurbulenceOption=$ynHasTurbulenceOption
 }
 
 
-# 形成亂流：
-# 使波紋圖形無規則起伏（單次起伏仍為一個週期波）。
-# 用亂數隨機的方式，
-# 建立長度為 `turbulenceIntensity` 的 `bwaveCode` 數字化波形。
+# 使波紋圖形無規則起伏。(單次振幅仍為一個週期波)
+#
+# 用亂數隨機的方式，建立長度為 [turbulenceIntensity]
+# 的數字化波形 [bwaveCode] 並回傳。
+rtnBecameTurbulent=""
 fnBecameTurbulent() {
   local idx len
   local newCode=""
@@ -120,103 +167,46 @@ fnBecameTurbulent() {
     newCode+="$((RANDOM % 2))"
   done
 
-  bwaveCode=$newCode
-  bwaveCodeLength=${#bwaveCode}
+  rtnBecameTurbulent="$newCode"
 }
 
 
-# 運行。
-fnRun() {
-  fnRunTimer
-}
-
-
-# 執行計時器： 讓計時器形成迴圈重複調用。
+# 建立並輸出波浪圖形。
 #
-# TODO shell 沒有類似 Object{} 的語法嗎？
-# TODO 是否還有其他類似計時器的功能呢？
-fnRunTimer() {
-  local loopCount=$1
-
-  while [ -n "y" ]
-  do
-    # 讀取命令行的寬度
-    fnSttySize
-    cmdLineColumns=$rtnSttySize_columns
-    fnMakeWave "$loopCount"
-    ((loopCount++))
-    # 讓程序睡眠停止運行
-    sleep "$bwavePeriod"
-  done
-}
-
-
-# 造浪： 建立並輸出波浪圖形。
+# [_makeWaveInfo] 應包含 `bwaveCode, bwaveCodeLength, bwaveSymbol, bwaveSymbolLength`
+# 四樣不變的資訊。
+# 以 [loopCount] 計算本次波形，參考上次顯示的波浪圖形 [bwaveGraph]
+# 來形成動畫，並以 [waveLength] 調整長度大小。
+rtnMakeWave=""
 fnMakeWave() {
-  local loopCount=$1
+  local bwaveGraph=$1
+  local loopCount=$2
+  local waveLength=$3
 
-  # 取得波浪長度
-  fnGetWaveLength "$cmdLineColumns"
-  local waveLength=$rtnGetWaveLength
-
-  # 取得波浪圖形
-  fnGetWaveGraph "$loopCount" "" "" "" "" "$bwaveGraph" "$waveLength"
-  local waveGraph=$rtnGetWaveGraph
-
-  # 更新於造浪資訊上的當前波浪圖形
-  bwaveGraph=$waveGraph
-
-  # 清除整行文字並將波浪圖形顯示在畫面上
-  printf "\r\e[K%s" "$waveGraph"
-}
-
-
-# 取得波浪長度：
-# 若 命令行寬度 >= 64 則 波浪長度 == 58；
-# 否則 波浪長度為 命令行寬度 - 6。
-rtnGetWaveLength=0
-fnGetWaveLength() {
-  local cmdLineColumns=$1
-
-  local waveLength=0
-  if [ $cmdLineColumns -ge 64 ]; then
-    waveLength=58
-  else
-    ((waveLength= cmdLineColumns - 6))
-  fi
-
-  rtnGetWaveLength=$waveLength
-}
-
-
-# 取得波浪圖形： 組合出波浪圖形。
-rtnGetWaveGraph=""
-fnGetWaveGraph() {
-  local loopCount=$1
-  local bwaveGraph=$6
-  local waveLength=$7
-
-  local waveGraph=""
+  local bwaveCode="${_makeWaveInfo["bwaveCode"]}"
+  local bwaveCodeLength=${_makeWaveInfo["bwaveCodeLength"]}
+  local bwaveSymbol=${_makeWaveInfo["bwaveSymbol"]}
+  local bwaveSymbolLength=${_makeWaveInfo["bwaveSymbolLength"]}
 
   # 確認此次是否產生波形
-  local symbolIdx
   # shell 計算會自動無條件捨去
-  local bwaveCodeIdx=$(((loopCount / bwaveSymbolLength) % bwaveCodeLength))
+  local bwaveCodeIdx=$(((loopCount / bwaveSymbolLength) % bwaveCodeLength));
+  local symbolIdx
   if [ "${bwaveCode:bwaveCodeIdx:1}" == "0" ]; then
     # 設置平行波形樣式
-    waveGraph="${bwaveSymbol[0]}$bwaveGraph"
+    symbolIdx=0
   else
     # 確認此次波形的樣式位置
     symbolIdx=$((bwaveSymbolLength - 1 - (loopCount % bwaveSymbolLength)))
-    waveGraph="${bwaveSymbol[symbolIdx]}$bwaveGraph"
   fi
+  local waveGraph="${bwaveSymbol:symbolIdx:1}$bwaveGraph"
 
   # 檢查長度是否符合，超過長度必須修減。
   if [ ${#waveGraph} -gt $waveLength ]; then
     waveGraph="${waveGraph:0:waveLength}"
   fi
 
-  rtnGetWaveGraph=$waveGraph
+  rtnMakeWave=$waveGraph
 }
 
 
